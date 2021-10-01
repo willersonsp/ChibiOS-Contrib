@@ -60,12 +60,6 @@ void sn32_clock_init(void) {
 
 }
 
-void SystemInit(void) {
-}
-
-void SystemCoreClockUpdate(void) {
-}
-
 /**
  * @brief   Low level HAL driver initialization.
  *
