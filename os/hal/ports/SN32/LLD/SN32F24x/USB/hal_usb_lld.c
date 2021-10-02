@@ -141,8 +141,6 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
 
 	//** Get Interrupt Status and clear immediately.
 	iwIntFlag = SN_USB->INSTS;
-    //Clear flags right away for interrupts that we dont handle, keep other untill fully handled
-    SN_USB->INSTSC = 0x0007C0C0;
 
 	if(iwIntFlag == 0)
 	{
@@ -191,6 +189,7 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
 		if (iwIntFlag & mskEP0_SETUP)
 		{
 			/* SETUP */
+            __USB_CLRINSTS((mskEP0_SETUP|mskEP0_PRESETUP|mskEP0_OUT_STALL|mskEP0_IN_STALL));
             //** keep EP0 NAK
             //USB_EPnNak(USB_EP0); //useless
 
@@ -204,13 +203,13 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
             epcp->out_state->rxpkts = 0;
 
             _usb_isr_invoke_setup_cb(usbp, 0);
-            __USB_CLRINSTS((mskEP0_SETUP|mskEP0_PRESETUP|mskEP0_OUT_STALL|mskEP0_IN_STALL));
 		}
 		else if (iwIntFlag & mskEP0_IN)
 		{
             USBInEndpointState *isp = epcp->in_state;
 
 			/* IN */
+            __USB_CLRINSTS(mskEP0_IN);
 
             // The address
             if (address) {
@@ -242,14 +241,14 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
 
                 _usb_isr_invoke_in_cb(usbp, 0);
             }
-            __USB_CLRINSTS(mskEP0_IN);
 
         }
         else if (iwIntFlag & mskEP0_OUT)
         {
             USBOutEndpointState *osp = epcp->out_state;
             /* OUT */
-
+            __USB_CLRINSTS(mskEP0_OUT);
+            
 			n = SN_USB->EP0CTL & mskEPn_CNT;
             if (n > epcp->out_maxsize)
                 n = epcp->out_maxsize;
@@ -289,7 +288,6 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
                 //more to receive
                 USB_EPnAck(USB_EP0, 0);
             }
-            __USB_CLRINSTS(mskEP0_OUT);
 
         }
         else if (iwIntFlag & (mskEP0_IN_STALL|mskEP0_OUT_STALL))
@@ -307,33 +305,33 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
         // Determine the interrupting endpoint, direction, and clear the interrupt flag
         if(iwIntFlag & mskEP1_ACK)
         {
-            handleACK(usbp, USB_EP1);
             __USB_CLRINSTS(mskEP1_ACK);
+            handleACK(usbp, USB_EP1);
         }
         if(iwIntFlag & mskEP2_ACK)
         {
-            handleACK(usbp, USB_EP2);
             __USB_CLRINSTS(mskEP2_ACK);
+            handleACK(usbp, USB_EP2);
         }
         if(iwIntFlag & mskEP3_ACK)
         {
-            handleACK(usbp, USB_EP3);
             __USB_CLRINSTS(mskEP3_ACK);
+            handleACK(usbp, USB_EP3);
         }
         if(iwIntFlag & mskEP4_ACK)
         {
-            handleACK(usbp, USB_EP4);
             __USB_CLRINSTS(mskEP4_ACK);
+            handleACK(usbp, USB_EP4);
         }
         if(iwIntFlag & mskEP5_ACK)
         {
-            handleACK(usbp, USB_EP5);
             __USB_CLRINSTS(mskEP5_ACK);
+            handleACK(usbp, USB_EP5);
         }
         if(iwIntFlag & mskEP6_ACK)
         {
-            handleACK(usbp, USB_EP6);
             __USB_CLRINSTS(mskEP6_ACK);
+            handleACK(usbp, USB_EP6);
         }
     }
 	else if (iwIntFlag & (mskEP6_NAK|mskEP5_NAK|mskEP4_NAK|mskEP3_NAK|mskEP2_NAK|mskEP1_NAK))
@@ -341,33 +339,33 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
         // Determine the interrupting endpoint, direction, and clear the interrupt flag
 		if (iwIntFlag & mskEP1_NAK)
 		{
-            handleNAK(usbp, USB_EP1);
             __USB_CLRINSTS(mskEP1_NAK);
+            handleNAK(usbp, USB_EP1);
 		}
 		if (iwIntFlag & mskEP2_NAK)
 		{
-            handleNAK(usbp, USB_EP2);
             __USB_CLRINSTS(mskEP2_NAK);
+            handleNAK(usbp, USB_EP2);
 		}
 		if (iwIntFlag & mskEP3_NAK)
 		{
-            handleNAK(usbp, USB_EP3);
             __USB_CLRINSTS(mskEP3_NAK);
+            handleNAK(usbp, USB_EP3);
 		}
 		if (iwIntFlag & mskEP4_NAK)
 		{
-            handleNAK(usbp, USB_EP4);
             __USB_CLRINSTS(mskEP4_NAK);
+            handleNAK(usbp, USB_EP4);
 		}
 		if (iwIntFlag & mskEP5_NAK)
 		{
-            handleNAK(usbp, USB_EP5);
             __USB_CLRINSTS(mskEP5_NAK);
+            handleNAK(usbp, USB_EP5);
 		}
 		if (iwIntFlag & mskEP6_NAK)
 		{
-            handleNAK(usbp, USB_EP6);
             __USB_CLRINSTS(mskEP6_NAK);
+            handleNAK(usbp, USB_EP6);
 		}
     }
 
@@ -377,8 +375,8 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
     if ((iwIntFlag & mskUSB_SOF) && (SN_USB->INTEN & mskUSB_SOF_IE))
     {
         /* SOF */
-        _usb_isr_invoke_sof_cb(usbp);
         __USB_CLRINSTS(mskUSB_SOF);
+        _usb_isr_invoke_sof_cb(usbp);
     }
 }
 
