@@ -35,6 +35,11 @@
 /*===========================================================================*/
 
 /**
+ * @brief   Maximum endpoint address.
+ */
+#define USB_MAX_ENDPOINTS                   USB_ENDPOINTS_NUMBER
+
+/**
  * @brief   Status stage handling method.
  */
 #define USB_EP0_STATUS_STAGE                USB_EP0_STATUS_STAGE_SW
