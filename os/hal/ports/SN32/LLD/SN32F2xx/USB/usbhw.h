@@ -188,6 +188,7 @@ extern const uint32_t wUSB_EPnOffset[];
 extern const uint32_t wUSB_EPnMaxPacketSize[];
 
 /* USB Hardware Functions */
+extern void USB_Buf_Init(void);
 extern void USB_Init(void);
 extern void USB_ClrEPnToggle(uint32_t wEPNum);
 extern void USB_EPnDisable(uint32_t wEPNum);

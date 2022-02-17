@@ -28,7 +28,15 @@ const uint32_t wUSB_EPnMaxPacketSize[5] = {
 #define System_Work_at_3_3V    0
 #define System_Work_at_5_0V    1
 
+void USB_Buf_Init(void)
+{
+    /* Initialize USB EP1~EP4 RAM Start address base on 64-bytes. */
+    USB_EPnBufferOffset(1, EP1_BUFFER_OFFSET_VALUE);
+    USB_EPnBufferOffset(2, EP2_BUFFER_OFFSET_VALUE);
+    USB_EPnBufferOffset(3, EP3_BUFFER_OFFSET_VALUE);
+    USB_EPnBufferOffset(4, EP4_BUFFER_OFFSET_VALUE);
 
+}
 /*****************************************************************************
 * Function      : USB_Init
 * Description   : 1. setting IDLE_TIME, REPORT_PROTOCOL, S_USB_EP0setupdata.wUSB_Status
@@ -51,13 +59,7 @@ void USB_Init(void)
     SystemInit();
     SystemCoreClockUpdate();
     sys1EnableUSB();  // Enable USB Clock
-
-    /* Initialize USB EP1~EP4 RAM Start address base on 64-bytes. */
-    USB_EPnBufferOffset(1, EP1_BUFFER_OFFSET_VALUE);
-    USB_EPnBufferOffset(2, EP2_BUFFER_OFFSET_VALUE);
-    USB_EPnBufferOffset(3, EP3_BUFFER_OFFSET_VALUE);
-    USB_EPnBufferOffset(4, EP4_BUFFER_OFFSET_VALUE);
-    
+    USB_Buf_Init();
     /* Enable the USB Interrupt */
     SN_USB->INTEN = (mskBUS_IE|mskUSB_IE|mskEPnACK_EN|mskBUSWK_IE);
     SN_USB->INTEN |= mskEP1_NAK_EN;
