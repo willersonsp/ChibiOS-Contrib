@@ -49,7 +49,6 @@ USBDriver USBD1;
 /* Driver local variables and types.                                         */
 /*===========================================================================*/
 
-static int address;
 static uint8_t nakcnt[USB_MAX_ENDPOINTS + 1] = {0, 0, 0, 0, 0};
 
 /**
@@ -274,12 +273,15 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
             USBInEndpointState *isp = epcp->in_state;
 
             /* IN */
-
-            // The address
-            if (address) {
-                SN_USB->ADDR = address;
-                address = 0;
-                USB_EPnStall(USB_EP0);
+            /* Special case for SetAddress for EP0*/
+            if((((uint16_t)usbp->setup[0]<<8)|usbp->setup[1]) == 0x0500)
+            {
+              usbp->address = usbp->setup[2];
+              usb_lld_set_address(usbp);
+              _usb_isr_invoke_event_cb(usbp, USB_EVENT_ADDRESS);
+              usbp->state = USB_SELECTED;
+              USB_EPnStall(USB_EP0);
+              //usb_lld_stall_in(usbp, 0);
             }
 
             isp->txcnt += isp->txlast;
@@ -648,16 +650,37 @@ void usb_lld_init(void) {
  * @notapi
  */
 void usb_lld_start(USBDriver *usbp) {
-    if (usbp->state == USB_STOP) {
-        /* Enables the peripheral.*/
-        #if PLATFORM_USB_USE_USB1 == TRUE
-        if (&USBD1 == usbp) {
-            USB_Init();
-            nvicEnableVector(SN32_USB_NUMBER, SN32_USB_IRQ_PRIORITY);
-        }
-        #endif
+  if (usbp->state == USB_STOP) {
+    /* Clock activation.*/
+#if SN32_USB_USE_USB1
+    if (&USBD1 == usbp) {
+      /* USB clock enabled.*/
+        sys1EnableUSB();
+        USB_Buf_Init();
+      /* Powers up the transceiver while holding the USB in reset state.*/
+      SN32_USB->SGCTL = mskBUS_J_STATE;
+      SN32_USB->CFG = (mskVREG33_EN|mskPHY_EN|mskDPPU_EN|mskSIE_EN|mskESD_EN);
+      /* Set up hardware configuration.*/
+      SN32_USB->PHYPRM = 0x80000000;
+      SN32_USB->PHYPRM2 = 0x00004004;
+      /* Enabling the USB IRQ vectors, this also gives enough time to allow
+         the transceiver power up (1uS).*/
+      SN32_USB->INTEN = (mskBUS_IE|mskUSB_IE|mskEPnACK_EN|mskBUSWK_IE|mskUSB_SOF_IE);
+      SN32_USB->INTEN |= mskEP1_NAK_EN;
+      SN32_USB->INTEN |= mskEP2_NAK_EN;
+      SN32_USB->INTEN |= mskEP3_NAK_EN;
+      SN32_USB->INTEN |= mskEP4_NAK_EN;
+#if (USB_ENDPOINTS_NUMBER > 4)
+      SN32_USB->INTEN |= mskEP5_NAK_EN;
+      SN32_USB->INTEN |= mskEP6_NAK_EN;
+#endif /* (USB_ENDPOINTS_NUMBER > 4) */
+
+      nvicEnableVector(SN32_USB_NUMBER, SN32_USB_IRQ_PRIORITY);
     }
-    /* Configures the peripheral.*/
+#endif
+    /* Reset procedure enforced on driver start.*/
+    usb_lld_reset(usbp);
+  }
 }
 
 /**
@@ -688,6 +711,10 @@ void usb_lld_stop(USBDriver *usbp) {
  */
 void usb_lld_reset(USBDriver *usbp) {
     /* Post reset initialization.*/
+    SN32_USB->INSTSC = (0xFFFFFFFF);
+    /* Set the address to zero during enumeration */
+    usbp->address = 0;
+    SN32_USB->ADDR  = 0;
 
     /* EP0 initialization.*/
     usbp->epc[0] = &ep0config;
@@ -702,9 +729,8 @@ void usb_lld_reset(USBDriver *usbp) {
  * @notapi
  */
 void usb_lld_set_address(USBDriver *usbp) {
-    // It seems the address must be set after an endpoint interrupt, so store it for now.
-    // It will be written to SN_USB->ADDR in the EP0 IN interrupt
-    address = usbp->address;
+
+    SN32_USB->ADDR = usbp->address & 0x7F;
 }
 
 /**
