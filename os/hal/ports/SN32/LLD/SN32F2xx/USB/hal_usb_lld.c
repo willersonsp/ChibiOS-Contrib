@@ -253,18 +253,11 @@ static void usb_lld_serve_interrupt(USBDriver *usbp)
         if (iwIntFlag & mskEP0_SETUP)
         {
             /* SETUP */
-            //** keep EP0    NAK
-            //USB_EPnNak(USB_EP0); //useless
-
-            //not sure we need it here...
-            //TODO: clean it up when packets are properly handled
-            epcp->in_state->txcnt  = 0;
-            epcp->in_state->txsize = 0;
-            epcp->in_state->txlast = 0;
-            epcp->out_state->rxcnt = 0;
-            epcp->out_state->rxsize = 0;
-            epcp->out_state->rxpkts = 0;
-
+            /* Clear receiving in the chibios state machine */
+            (usbp)->receiving &= ~1;
+            /* Call SETUP function (ChibiOS core), which prepares
+             * for send or receive and releases the buffer
+             */
             _usb_isr_invoke_setup_cb(usbp, 0);
             __USB_CLRINSTS((mskEP0_SETUP|mskEP0_PRESETUP|mskEP0_OUT_STALL|mskEP0_IN_STALL));
         }
