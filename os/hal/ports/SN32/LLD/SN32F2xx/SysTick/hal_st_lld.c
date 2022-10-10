@@ -164,6 +164,7 @@ void st_lld_serve_interrupt(void) {
   sn32_ct_t *ct = SN32_ST_TIM;
 
   ris  = ct->RIS;
+  ct->IC = mskCT16_MR0IC;
   if ((ris & mskCT16_MR0IF) != 0U)
 #endif
   {
