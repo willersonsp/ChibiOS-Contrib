@@ -145,7 +145,7 @@ static inline systime_t st_lld_get_counter(void) {
  */
 static inline void st_lld_start_alarm(systime_t abstime) {
   SN32_ST_TIM->MR0 = (uint32_t)abstime;
-  SN32_ST_TIM->IC &= 0x1FFFFFF;
+  SN32_ST_TIM->IC = mskCT16_MR0IC;
   SN32_ST_TIM->MCTRL |= mskCT16_MR0IE_EN;
 }
 
