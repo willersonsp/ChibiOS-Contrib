@@ -133,7 +133,11 @@ void st_lld_init(void) {
   ST_INIT_CLOCK();
   /* Initializing the counter in free running mode.*/
   SN32_ST_TIM->PRE    = (SYSTICK_CK / OSAL_ST_FREQUENCY) - 1;
+#if SN32_ST_USE_TIMER == CT16B0
+  SN32_ST_TIM->IC     = mskCT16_MR0IC | mskCT16_CAP0IC;
+#elif SN32_ST_USE_TIMER == CT16B1
   SN32_ST_TIM->IC      &= 0x1FFFFFF;
+#endif
   SN32_ST_TIM->TMRCTRL |= mskCT16_CEN_EN;
 
   /* IRQ enabled.*/
